@@ -6,6 +6,8 @@
 - Naming Conventions: Use meaningful names, using **Camel Case naming style.**
 - **Follow Existing Convetions:** This nestjs project uses a controller, services,
 
+Most important: I use pnpm as my package manager always install packages with pnpm.
+
 # **UniNav - University Study Materials Platform**
 
 ## **Project Overview**
