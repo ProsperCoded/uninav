@@ -7,6 +7,3 @@
 [submodule "uninav-frontend"]
 	path = uninav-frontend
 	url = https://github.com/ProsperCoded/uninav_frontend
-[submodule "uninav-pitch-site"]
-	path = uninav-pitch-site
-	url = https://github.com/ProsperCoded/uninav-pitch-site
