@@ -1,0 +1,111 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+---
+
+description:
+globs:
+alwaysApply: true
+
+---
+
+# AI Coding Agent Instructions
+
+Concise, project-specific guidance for working effectively in this repository. Stay pragmatic: follow existing patterns before introducing new abstractions.
+
+## 1. Stack & Entry Points
+
+- Vite + React 18 + TypeScript + Tailwind + Radix UI primitives + shadcn-style component patterns.
+- Routing via `react-router-dom` (see `src/App.tsx` for all declared routes).
+- Global auth + user identity: `AuthContextProvider` wraps the app in `App.tsx` and exposes hooks via `useAuth`.
+- Data fetching: hybrid of SWR (for auth/user profile) and `@tanstack/react-query` (QueryClientProvider is set up but many APIs still use manual wrappers). Prefer SWR for auth-bound singletons, react-query for list / mutation flows you add.
+
+## 2. Directory Conventions
+
+- `src/api/*.api.ts`: Thin, typed wrappers around backend endpoints using a shared `httpClient` (redaxios). Pattern: try/catch, throw normalized `{ statusCode, message }` objects; extract bearer token from `authorization` header when relevant.
+- `src/context/authentication/`: Auth context + provider + initialization logic (cookie/session check, One Tap). Do not bypass these when gating routes.
+- `src/components/` subdivided by feature domain (`auth`, `dashboard`, `management`, `badges`, `ui`, etc.). Co-locate small domain-specific components here rather than creating new top-level folders.
+- `src/pages/`: Route-level components only (composition + minimal logic). Keep heavy logic in hooks / api modules / context.
+- `src/lib/`: Utilities (`utils.ts` includes `API_BASE_URL`, `cn`), types, validation (future).
+- `src/hooks/`: Reusable hooks (e.g. `useAuth`). Keep hooks side-effect free except for data lifecycle.
+
+## 3. Auth & Routing Patterns
+
+- Auth status initial check: `isClientAuthenticated()` (cookie/session) inside `AuthContextProvider` sets `loggedIn`; then SWR fetches `/user/profile` when `loggedIn` is true.
+- Loading states: use `authInitializing` (derived) to block protected content. Do NOT add ad-hoc spinners in protected pages—wrap in `ProtectedRoute` instead.
+- Public auth pages (signin/signup/verification/reset) use `<AuthRedirect>` to push authenticated users to `/dashboard`.
+- Protected sections (dashboard, management) must be wrapped in `<ProtectedRoute>`; rely on `user` from context—not separate API calls—to decide access.
+
+## 4. HTTP & Data Layer
+
+- `httpClient` (redaxios) in `api/api.ts` sets `baseURL` from `API_BASE_URL` (`VITE_API_BASE_URL` env fallback `http://localhost:3200`) and `withCredentials: true` (session cookies).
+- API functions follow pattern:
+  ```ts
+  try {
+    const res = await httpClient.post("/path", payload);
+    return transformed;
+  } catch (error: any) {
+    throw {
+      statusCode: error.response?.status || 500,
+      message: error.response?.data?.message || Fallback,
+    };
+  }
+  ```
+- Token extraction (auth endpoints): `response.headers['authorization']?.replace('Bearer ', '')` – replicate if new endpoints embed token.
+- For new list / mutation features (e.g., course management), prefer react-query with descriptive keys: `['courses', filters]`; invalidate on mutation success.
+
+## 5. State & UI Patterns
+
+- Style composition: use `cn()` from `lib/utils.ts` to merge class names safely (tailwind-merge + clsx).
+- Layout components (`DashboardLayout`, `ManagementLayout`) own structural chrome; pages supply semantic sections only.
+- Avoid introducing global state libraries; context is only for cross-cutting concerns (auth, theme if added). Per-feature cache -> react-query.
+- Loading UX: For route gating use existing spinners in `AuthRedirect` / `ProtectedRoute`. For data panels, add inline skeletons or placeholders (see `MaterialPlaceholder.tsx`).
+
+## 6. Error Handling & Toasts
+
+- Surface user-facing errors via `toast` (sonner) – follow existing pattern in auth (e.g., Google One Tap failure). Keep thrown API errors normalized so callers can map `statusCode`.
+- Do not leak raw axios error objects upward—always map to `{ statusCode, message }` at boundary.
+
+## 7. Adding Features (Example Workflow)
+
+1. Add endpoint wrapper in `src/api/feature.api.ts` mirroring error pattern.
+2. Create UI hook (e.g., `useCourses()` using react-query) for pages/components to consume.
+3. Page component in `src/pages/management/` composes layout + hook data + presentational components from `src/components/management/`.
+4. Guard route in `App.tsx` under `/management` inside existing `<ProtectedRoute>` block.
+
+## 8. Environment & Commands
+
+- Dev: `pnpm dev` (or `npm run dev` if using npm) starts Vite server.
+- Build: `pnpm build` (adds `--mode development` variant via `build:dev`).
+- Preview: `pnpm preview` to serve built assets.
+- Lint: `pnpm lint` uses flat `eslint.config.js` (React, TS, hooks rules). Fix issues before committing.
+- Required env vars: `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` (One Tap / OAuth). Provide `.env` locally; never commit secrets.
+
+## 9. Performance & Caching Notes
+
+- SWR user profile fetch dedupingInterval 120s + focus throttling; respect this—don't force extra revalidations unless user state changes.
+- When mutating authenticated user data, call `refreshAuthState` (SWR mutate) from context to re-fetch `/user/profile` instead of custom calls.
+
+## 10. Code Style & Naming
+
+- Filenames: PascalCase for components, camelCase for hooks/files that export functions, kebab-case not used.
+- Avoid default-exporting multiple unrelated utilities; group by concern.
+- Keep top-level side effects minimal (init providers only in `App.tsx`).
+
+## 11. Safe Changes Checklist (before PR)
+
+- New API file follows error normalization pattern.
+- Protected routes stay inside existing `<ProtectedRoute>` hierarchy.
+- No direct `httpClient` calls inside page components—abstract via API layer or hooks.
+- Tailwind class merging uses `cn()` where conditional classes are present.
+- Toasts for user actions (create/update/delete) use consistent phrasing.
+
+## 12. Future Observations
+
+- React Query not yet heavily leveraged—transition opportunistically (don't refactor en masse).
+- Consider centralizing token handling if more endpoints start returning auth headers.
+
+(End)
