@@ -1,3 +1,12 @@
 {
-  "cSpell.words": ["Matric"]
+  "cSpell.words": ["Matric"],
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "driver": "PostgreSQL",
+      "connectString": "postgresql://postgres.yvqpalmbprubntgqvbhd:Webuild%24%24%241@aws-0-eu-central-1.pooler.supabase.com:6543/postgres",
+      "name": "uninav db"
+    }
+  ]
 }
